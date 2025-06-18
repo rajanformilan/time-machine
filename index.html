@@ -264,6 +264,14 @@ fetch('https://api.coindesk.com/v1/bpi/currentprice.json')
     document.getElementById('price').innerText = data.bpi.USD.rate;
   })
   .catch(err => console.error('Failed to load price:', err));
+async function fetchLivePrice() {
+  const res = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd");
+  const data = await res.json();
+  const priceNum = data.bitcoin.usd;
+  btcPriceEl.textContent = "📈 Live BTC Price: $" + priceNum.toLocaleString();
+}
+btcPriceEl.textContent = "📈 Live BTC Price: $" + priceNum.toLocaleString() + 
+  " (Updated: " + new Date().toLocaleTimeString() + ")";
 
 </script>
 
