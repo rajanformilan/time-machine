@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Bitcoin Time Machine</title>
   <style>
-    /* Reset and base */
     * {
       box-sizing: border-box;
     }
@@ -28,7 +27,7 @@
       font-size: 1.8rem;
     }
 
-    #btcPrice, #prediction, #futureNote, #historicalPrice {
+    #btcPrice, #livePrice, #prediction, #futureNote, #historicalPrice {
       background: #222;
       padding: 15px;
       border-radius: 10px;
@@ -84,7 +83,6 @@
       height: 200px !important;
     }
 
-    /* Responsive */
     @media (max-width: 450px) {
       body {
         padding: 15px 10px;
@@ -92,7 +90,7 @@
       h1 {
         font-size: 1.5rem;
       }
-      #btcPrice, #prediction, #futureNote, #historicalPrice, canvas {
+      #btcPrice, #livePrice, #prediction, #futureNote, #historicalPrice, canvas {
         max-width: 100%;
       }
     }
@@ -102,7 +100,8 @@
 
   <h1>🕒 Bitcoin Time Machine</h1>
 
-  <div id="btcPrice">🔄 Loading live BTC price...</div>
+  <div id="btcPrice">🔄 Loading static historical BTC price data...</div>
+  <div id="livePrice">⏳ Connecting to Binance for live BTC price...</div>
 
   <div>
     <label for="year">Select Year:</label>
@@ -143,8 +142,8 @@
     2025: 58000
   };
 
-  // Elements
   const btcPriceEl = document.getElementById("btcPrice");
+  const livePriceEl = document.getElementById("livePrice");
   const yearSelect = document.getElementById("year");
   const historicalPriceEl = document.getElementById("historicalPrice");
   const futureYearInput = document.getElementById("futureYear");
@@ -153,7 +152,7 @@
   const savedNoteEl = document.getElementById("savedNote");
   const saveNoteBtn = document.getElementById("saveNoteBtn");
 
-  // Populate year select dropdown
+  // Populate dropdown for historical years
   for (const year in btcData) {
     const opt = document.createElement("option");
     opt.value = year;
@@ -164,13 +163,13 @@
   yearSelect.addEventListener("change", () => {
     const year = yearSelect.value;
     if(year && btcData[year]) {
-      historicalPriceEl.textContent = "💰 BTC Price in " + year + ": $" + btcData[year];
+      historicalPriceEl.textContent = "💰 BTC Price in " + year + ": $" + btcData[year].toLocaleString();
     } else {
       historicalPriceEl.textContent = "";
     }
   });
 
-  // Chart
+  // Chart setup
   const ctx = document.getElementById("btcChart").getContext("2d");
   const btcChart = new Chart(ctx, {
     type: 'line',
@@ -205,36 +204,48 @@
     }
   });
 
-  // Live BTC price fetch every 1 second using CoinGecko API
-  async function fetchLivePrice() {
-    try {
-      const res = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd");
-      const data = await res.json();
-      const priceNum = data.bitcoin.usd;
-      btcPriceEl.textContent = "📈 Live BTC Price: $" + priceNum.toLocaleString();
-    } catch {
-      btcPriceEl.textContent = "⚠️ Failed to load live price.";
-    }
-  }
-  fetchLivePrice();
-  setInterval(fetchLivePrice, 1000); // every second
+  // Show static historical BTC price loaded message
+  btcPriceEl.textContent = `📊 Static Historical BTC Data loaded.`;
 
-  // Predict BTC price function
+  // -- Binance WebSocket live BTC/USDT price --
+  try {
+    const ws = new WebSocket('wss://stream.binance.com:9443/ws/btcusdt@trade');
+    ws.onopen = () => {
+      livePriceEl.textContent = "🔗 Connected to Binance WebSocket for live BTC price...";
+    };
+    ws.onmessage = event => {
+      const data = JSON.parse(event.data);
+      const price = parseFloat(data.p).toFixed(2);
+      const now = new Date();
+      livePriceEl.textContent = `📈 Live BTC/USDT Price: $${price} (Updated: ${now.toLocaleDateString()} ${now.toLocaleTimeString()})`;
+    };
+    ws.onerror = () => {
+      livePriceEl.textContent = "⚠️ Binance WebSocket connection error.";
+    };
+    ws.onclose = () => {
+      livePriceEl.textContent = "⚠️ Binance WebSocket connection closed.";
+    };
+  } catch (e) {
+    livePriceEl.textContent = "⚠️ Failed to connect to Binance WebSocket.";
+  }
+
+  // Prediction function
   function predictPrice() {
     const year = parseInt(futureYearInput.value);
     const lastYear = Math.max(...Object.keys(btcData));
     const lastPrice = btcData[lastYear];
-    const growthRate = 1.15; // 15% yearly growth assumption
+    const growthRate = 1.15; // 15% yearly growth assumed
+
     if (!year || year <= lastYear) {
       predictedResultEl.textContent = "";
       savedNoteEl.textContent = "";
       return;
     }
+
     const yearsAhead = year - lastYear;
     const predicted = Math.round(lastPrice * Math.pow(growthRate, yearsAhead));
     predictedResultEl.textContent = `🧠 Predicted BTC Price in ${year}: $${predicted.toLocaleString()}`;
 
-    // Load saved note if any
     const savedNote = localStorage.getItem("btc_note_" + year);
     if(savedNote) {
       savedNoteEl.textContent = `📌 Saved for ${year}: "${savedNote}"`;
@@ -243,10 +254,9 @@
     }
   }
 
-  // Live prediction update every second
   setInterval(predictPrice, 1000);
 
-  // Save note button
+  // Save notes
   saveNoteBtn.addEventListener("click", () => {
     const year = futureYearInput.value;
     const text = futureText.value.trim();
@@ -258,21 +268,6 @@
     savedNoteEl.textContent = `📌 Saved for ${year}: "${text}"`;
     futureText.value = "";
   });
-fetch('https://api.coindesk.com/v1/bpi/currentprice.json')
-  .then(res => res.json())
-  .then(data => {
-    document.getElementById('price').innerText = data.bpi.USD.rate;
-  })
-  .catch(err => console.error('Failed to load price:', err));
-async function fetchLivePrice() {
-  const res = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd");
-  const data = await res.json();
-  const priceNum = data.bitcoin.usd;
-  btcPriceEl.textContent = "📈 Live BTC Price: $" + priceNum.toLocaleString();
-}
-btcPriceEl.textContent = "📈 Live BTC Price: $" + priceNum.toLocaleString() + 
-  " (Updated: " + new Date().toLocaleTimeString() + ")";
-
 </script>
 
 </body>
