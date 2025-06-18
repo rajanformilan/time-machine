@@ -258,6 +258,12 @@
     savedNoteEl.textContent = `📌 Saved for ${year}: "${text}"`;
     futureText.value = "";
   });
+fetch('https://api.coindesk.com/v1/bpi/currentprice.json')
+  .then(res => res.json())
+  .then(data => {
+    document.getElementById('price').innerText = data.bpi.USD.rate;
+  })
+  .catch(err => console.error('Failed to load price:', err));
 
 </script>
 
