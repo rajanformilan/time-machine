@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Bitcoin Time Machine</title>
+  <style>
+    /* Reset and base */
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      font-family: Arial, sans-serif;
+      background: #111;
+      color: white;
+      margin: 0;
+      padding: 20px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    h1 {
+      color: #f1c40f;
+      text-align: center;
+      margin-bottom: 15px;
+      font-weight: 700;
+      font-size: 1.8rem;
+    }
+
+    #btcPrice, #prediction, #futureNote, #historicalPrice {
+      background: #222;
+      padding: 15px;
+      border-radius: 10px;
+      margin: 10px 0;
+      width: 100%;
+      max-width: 400px;
+      word-wrap: break-word;
+      font-size: 1rem;
+    }
+
+    label {
+      display: block;
+      margin-top: 15px;
+      font-weight: 600;
+      font-size: 1rem;
+      color: #f39c12;
+    }
+
+    select, input[type="number"], textarea {
+      width: 100%;
+      padding: 8px 10px;
+      margin-top: 6px;
+      border-radius: 6px;
+      border: none;
+      font-size: 1rem;
+      font-family: inherit;
+      resize: vertical;
+    }
+
+    button {
+      width: 100%;
+      background: #f39c12;
+      color: white;
+      padding: 12px;
+      border: none;
+      border-radius: 6px;
+      margin-top: 15px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+    button:hover {
+      background: #d17f0a;
+    }
+
+    canvas {
+      background: #222;
+      border-radius: 10px;
+      margin-top: 15px;
+      width: 100% !important;
+      max-width: 400px;
+      height: 200px !important;
+    }
+
+    /* Responsive */
+    @media (max-width: 450px) {
+      body {
+        padding: 15px 10px;
+      }
+      h1 {
+        font-size: 1.5rem;
+      }
+      #btcPrice, #prediction, #futureNote, #historicalPrice, canvas {
+        max-width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🕒 Bitcoin Time Machine</h1>
+
+  <div id="btcPrice">🔄 Loading live BTC price...</div>
+
+  <div>
+    <label for="year">Select Year:</label>
+    <select id="year">
+      <option value="">-- Select Year --</option>
+    </select>
+    <div id="historicalPrice"></div>
+  </div>
+
+  <canvas id="btcChart" width="400" height="200"></canvas>
+
+  <div id="prediction">
+    <label for="futureYear">Enter Future Year:</label>
+    <input type="number" id="futureYear" placeholder="e.g. 2030" min="2026" max="2100" />
+    <div id="predictedResult" style="margin-top:10px; font-weight:700;"></div>
+  </div>
+
+  <div id="futureNote">
+    <label for="futureText">✍️ What happens with BTC in that year?</label>
+    <textarea id="futureText" rows="4" placeholder="E.g., BTC reaches $1M due to space mining..."></textarea>
+    <button id="saveNoteBtn">💾 Save Note</button>
+    <div id="savedNote" style="margin-top:10px; font-weight:600;"></div>
+  </div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  const btcData = {
+    2015: 315,
+    2016: 434,
+    2017: 997,
+    2018: 3700,
+    2019: 7200,
+    2020: 11000,
+    2021: 45000,
+    2022: 21000,
+    2023: 27000,
+    2024: 62000,
+    2025: 58000
+  };
+
+  // Elements
+  const btcPriceEl = document.getElementById("btcPrice");
+  const yearSelect = document.getElementById("year");
+  const historicalPriceEl = document.getElementById("historicalPrice");
+  const futureYearInput = document.getElementById("futureYear");
+  const predictedResultEl = document.getElementById("predictedResult");
+  const futureText = document.getElementById("futureText");
+  const savedNoteEl = document.getElementById("savedNote");
+  const saveNoteBtn = document.getElementById("saveNoteBtn");
+
+  // Populate year select dropdown
+  for (const year in btcData) {
+    const opt = document.createElement("option");
+    opt.value = year;
+    opt.textContent = year;
+    yearSelect.appendChild(opt);
+  }
+
+  yearSelect.addEventListener("change", () => {
+    const year = yearSelect.value;
+    if(year && btcData[year]) {
+      historicalPriceEl.textContent = "💰 BTC Price in " + year + ": $" + btcData[year];
+    } else {
+      historicalPriceEl.textContent = "";
+    }
+  });
+
+  // Chart
+  const ctx = document.getElementById("btcChart").getContext("2d");
+  const btcChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: Object.keys(btcData),
+      datasets: [{
+        label: 'BTC Price (USD)',
+        data: Object.values(btcData),
+        borderColor: '#f39c12',
+        backgroundColor: 'rgba(243, 156, 18, 0.2)',
+        fill: true,
+        tension: 0.4,
+        pointRadius: 3,
+        pointHoverRadius: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { labels: { color: '#f39c12', font: {size: 14, weight: 'bold'} } }
+      },
+      scales: {
+        x: {
+          ticks: { color: '#f39c12' },
+          grid: { color: '#333' }
+        },
+        y: {
+          ticks: { color: '#f39c12' },
+          grid: { color: '#333' }
+        }
+      }
+    }
+  });
+
+  // Live BTC price fetch every 1 second using CoinGecko API
+  async function fetchLivePrice() {
+    try {
+      const res = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd");
+      const data = await res.json();
+      const priceNum = data.bitcoin.usd;
+      btcPriceEl.textContent = "📈 Live BTC Price: $" + priceNum.toLocaleString();
+    } catch {
+      btcPriceEl.textContent = "⚠️ Failed to load live price.";
+    }
+  }
+  fetchLivePrice();
+  setInterval(fetchLivePrice, 1000); // every second
+
+  // Predict BTC price function
+  function predictPrice() {
+    const year = parseInt(futureYearInput.value);
+    const lastYear = Math.max(...Object.keys(btcData));
+    const lastPrice = btcData[lastYear];
+    const growthRate = 1.15; // 15% yearly growth assumption
+    if (!year || year <= lastYear) {
+      predictedResultEl.textContent = "";
+      savedNoteEl.textContent = "";
+      return;
+    }
+    const yearsAhead = year - lastYear;
+    const predicted = Math.round(lastPrice * Math.pow(growthRate, yearsAhead));
+    predictedResultEl.textContent = `🧠 Predicted BTC Price in ${year}: $${predicted.toLocaleString()}`;
+
+    // Load saved note if any
+    const savedNote = localStorage.getItem("btc_note_" + year);
+    if(savedNote) {
+      savedNoteEl.textContent = `📌 Saved for ${year}: "${savedNote}"`;
+    } else {
+      savedNoteEl.textContent = "";
+    }
+  }
+
+  // Live prediction update every second
+  setInterval(predictPrice, 1000);
+
+  // Save note button
+  saveNoteBtn.addEventListener("click", () => {
+    const year = futureYearInput.value;
+    const text = futureText.value.trim();
+    if (!year || !text) {
+      alert("Please enter both a future year and your prediction note.");
+      return;
+    }
+    localStorage.setItem("btc_note_" + year, text);
+    savedNoteEl.textContent = `📌 Saved for ${year}: "${text}"`;
+    futureText.value = "";
+  });
+
+</script>
+
+</body>
+</html>
