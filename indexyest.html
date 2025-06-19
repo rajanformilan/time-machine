@@ -1,15 +1,1 @@
-<!DOCTYPE html>
-<html>
-<body style="background:#000;color:#fff;text-align:center;font-size:24px;padding-top:50px">
-  <div id="price">Connecting...</div>
-<script>
-  const el = document.getElementById("price");
-  const ws = new WebSocket("wss://stream.binance.com:9443/ws/btcusdt@trade");
-  ws.onmessage = e => {
-    const d = JSON.parse(e.data);
-    el.textContent = `BTC: $${parseFloat(d.p).toFixed(2)}`;
-  };
-  ws.onerror = () => el.textContent = "Error loading price";
-</script>
-</body>
-</html>
+
