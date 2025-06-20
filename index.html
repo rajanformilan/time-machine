@@ -5,7 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Bitcoin Time Machine</title>
   <style>
-    * { box-sizing: border-box; }
+    * {
+      box-sizing: border-box;
+    }
     body {
       font-family: Arial, sans-serif;
       background: #111;
@@ -24,6 +26,7 @@
       font-weight: 700;
       font-size: 1.8rem;
     }
+
     #btcPrice, #livePrice, #prediction, #futureNote, #historicalPrice {
       background: #222;
       padding: 15px;
@@ -34,6 +37,7 @@
       word-wrap: break-word;
       font-size: 1rem;
     }
+
     label {
       display: block;
       margin-top: 15px;
@@ -41,6 +45,7 @@
       font-size: 1rem;
       color: #f39c12;
     }
+
     select, input[type="number"], textarea {
       width: 100%;
       padding: 8px 10px;
@@ -51,6 +56,7 @@
       font-family: inherit;
       resize: vertical;
     }
+
     button {
       width: 100%;
       background: #f39c12;
@@ -67,6 +73,7 @@
     button:hover {
       background: #d17f0a;
     }
+
     canvas {
       background: #222;
       border-radius: 10px;
@@ -75,9 +82,14 @@
       max-width: 400px;
       height: 200px !important;
     }
+
     @media (max-width: 450px) {
-      body { padding: 15px 10px; }
-      h1 { font-size: 1.5rem; }
+      body {
+        padding: 15px 10px;
+      }
+      h1 {
+        font-size: 1.5rem;
+      }
       #btcPrice, #livePrice, #prediction, #futureNote, #historicalPrice, canvas {
         max-width: 100%;
       }
@@ -87,10 +99,7 @@
 <body>
 
   <h1>🕒 Bitcoin Time Machine</h1>
-
-  <div id="btcPrice">🔄 Loading static historical BTC price data...</div>
-  <div id="livePrice">⏳ Loading recent BTC/USDT price...</div>
-
+<button><a href="https://www.cryptocompare.com/"> Recent Price Range</a></button>
   <div>
     <label for="year">Select Year:</label>
     <select id="year">
@@ -140,7 +149,7 @@
   const savedNoteEl = document.getElementById("savedNote");
   const saveNoteBtn = document.getElementById("saveNoteBtn");
 
-  // Populate year dropdown
+  // Populate dropdown for historical years
   for (const year in btcData) {
     const opt = document.createElement("option");
     opt.value = year;
@@ -150,7 +159,7 @@
 
   yearSelect.addEventListener("change", () => {
     const year = yearSelect.value;
-    if (year && btcData[year]) {
+    if(year && btcData[year]) {
       historicalPriceEl.textContent = "💰 BTC Price in " + year + ": $" + btcData[year].toLocaleString();
     } else {
       historicalPriceEl.textContent = "";
@@ -192,47 +201,37 @@
     }
   });
 
+  // Show static historical BTC price loaded message
   btcPriceEl.textContent = `📊 Static Historical BTC Data loaded.`;
 
-  // Show saved last known price if any
-  const lastPrice = localStorage.getItem("btc_last_price");
-  const lastTime = localStorage.getItem("btc_last_time");
-  if (lastPrice && lastTime) {
-    livePriceEl.textContent = `📦 Last Known BTC Price: $${parseFloat(lastPrice).toFixed(2)} (Saved: ${new Date(parseInt(lastTime)).toLocaleString()})`;
-  } else {
-    livePriceEl.textContent = "📦 No saved BTC price. Waiting for connection...";
-  }
-
-  // Connect to Binance WebSocket for live price
+  // -- Binance WebSocket live BTC/USDT price --
   try {
     const ws = new WebSocket('wss://stream.binance.com:9443/ws/btcusdt@trade');
     ws.onopen = () => {
-      console.log("✅ Connected to Binance WebSocket.");
+      livePriceEl.textContent = "🔗 Connected to Binance WebSocket for live BTC price...";
     };
     ws.onmessage = event => {
       const data = JSON.parse(event.data);
       const price = parseFloat(data.p).toFixed(2);
       const now = new Date();
-      livePriceEl.textContent = `📈 Live BTC/USDT Price: $${price} (Updated: ${now.toLocaleString()})`;
-      localStorage.setItem("btc_last_price", price);
-      localStorage.setItem("btc_last_time", Date.now());
+      livePriceEl.textContent = `📈 Live BTC/USDT Price: $${price} (Updated: ${now.toLocaleDateString()} ${now.toLocaleTimeString()})`;
     };
     ws.onerror = () => {
-      livePriceEl.textContent = "⚠️ Binance WebSocket error.";
+      livePriceEl.textContent = "⚠️ Binance WebSocket connection error.";
     };
     ws.onclose = () => {
-      livePriceEl.textContent = "⚠️ Binance WebSocket closed. Showing last known price.";
+      livePriceEl.textContent = "⚠️ Binance WebSocket connection closed.";
     };
   } catch (e) {
-    livePriceEl.textContent = "⚠️ Could not connect. Using last known data if available.";
+    livePriceEl.textContent = "⚠️ Failed to connect to Binance WebSocket.";
   }
 
-  // Prediction
+  // Prediction function
   function predictPrice() {
     const year = parseInt(futureYearInput.value);
     const lastYear = Math.max(...Object.keys(btcData));
     const lastPrice = btcData[lastYear];
-    const growthRate = 1.15; // 15% annual growth
+    const growthRate = 1.15; // 15% yearly growth assumed
 
     if (!year || year <= lastYear) {
       predictedResultEl.textContent = "";
@@ -245,7 +244,7 @@
     predictedResultEl.textContent = `🧠 Predicted BTC Price in ${year}: $${predicted.toLocaleString()}`;
 
     const savedNote = localStorage.getItem("btc_note_" + year);
-    if (savedNote) {
+    if(savedNote) {
       savedNoteEl.textContent = `📌 Saved for ${year}: "${savedNote}"`;
     } else {
       savedNoteEl.textContent = "";
@@ -254,6 +253,7 @@
 
   setInterval(predictPrice, 1000);
 
+  // Save notes
   saveNoteBtn.addEventListener("click", () => {
     const year = futureYearInput.value;
     const text = futureText.value.trim();
